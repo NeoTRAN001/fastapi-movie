@@ -1,6 +1,8 @@
 from fastapi import APIRouter
-from fastapi import HTTPException, Body, Path
-from fastapi.responses import HTMLResponse
+from fastapi import HTTPException, Body, Path, Query, status
+from fastapi.responses import HTMLResponse, JSONResponse
+
+from typing import List
 
 from schemas.movie_schema import Movie
 from data.data import movies
@@ -13,23 +15,24 @@ def message():
     return HTMLResponse('<h1>Hola</h1>')
 
 
-@router.get('/movies', tags=['movies'])
+@router.get('/movies', tags=['movies'], response_model=List[Movie], status_code=status.HTTP_200_OK)
 def get_movies():
-    return movies
+    return JSONResponse(status_code=status.HTTP_200_OK, content=movies)
 
 
-@router.get('/movies/{id}', tags=['movies'])
+@router.get('/movies/{id}', tags=['movies'], status_code=status.HTTP_200_OK)
 def get_movie(id: int = Path(ge=1, le=2000)):
     for i in movies:
         if i["id"] == id:
-            return i
+            return JSONResponse(content=i, status_code=status.HTTP_200_OK)
 
-    return []
+    return JSONResponse(content=[], status_code=status.HTTP_404_NOT_FOUND)
 
 
 @router.get('/movies/', tags=['movies'])
-def get_movies_by_category(category: str, year: int):
-    return [item for item in movies if item['category'] == category]
+def get_movies_by_category(category: str = Query(min_length=5, max_length=15)):
+    data = [item for item in movies if item['category'] == category]
+    return JSONResponse(content=data)
 
 
 @router.post(
@@ -39,7 +42,7 @@ def get_movies_by_category(category: str, year: int):
 def create_movie(movie: Movie = Body(...)):
     movies.append(movie.dict())
 
-    return movies
+    return JSONResponse(content={"message": "Se ha registrado la película"})
 
 
 @router.put("/movies/{id}", tags=['movies'])
@@ -48,7 +51,7 @@ def update_movie(id: int, movie: Movie = Body(...)):
         if item['id'] == id:
             movie.id = id
             movies[index].update(movie.dict())
-            return movies
+            return JSONResponse(content={"message": "Se ha actualizado la película"})
 
     raise HTTPException(status_code=404, detail="Movie not found")
 
@@ -58,6 +61,6 @@ def delete_movie(id: int):
     for index, item in enumerate(movies):
         if item['id'] == id:
             del movies[index]
-            return {'status': 'deleted movie'}
+            return JSONResponse(content={"message": "Se ha eliminado la película"})
 
     raise HTTPException(status_code=404, detail="Movie not found")

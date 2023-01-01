@@ -1,7 +1,9 @@
 import uvicorn
 
 from fastapi import FastAPI
-from controllers import movie_controller
+
+import services.jwt_service
+from controllers import movie_controller, auth_controller
 
 app = FastAPI()
 
@@ -12,7 +14,10 @@ def config():
 
 
 def routes():
-    app.include_router(movie_controller.router)
+    controllers = [movie_controller, auth_controller]
+
+    for controller in controllers:
+        app.include_router(controller.router)
 
 
 if __name__ == "__main__":
