@@ -1,9 +1,10 @@
 from fastapi import APIRouter
-from fastapi import HTTPException, Body, Path, Query, status
+from fastapi import HTTPException, Body, Path, Query, status, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from typing import List
 
+from middleware import JWTBearer
 from schemas.movie_schema import Movie
 from data.data import movies
 
@@ -37,7 +38,8 @@ def get_movies_by_category(category: str = Query(min_length=5, max_length=15)):
 
 @router.post(
     '/movies',
-    tags=['movies']
+    tags=['movies'],
+    dependencies=[Depends(JWTBearer())]
 )
 def create_movie(movie: Movie = Body(...)):
     movies.append(movie.dict())

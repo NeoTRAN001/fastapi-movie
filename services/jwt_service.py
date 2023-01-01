@@ -1,3 +1,4 @@
+import jwt.exceptions
 from jwt import encode, decode
 from dotenv import load_dotenv
 import os
@@ -13,9 +14,17 @@ def create_token(data: dict) -> str:
     )
 
 
-def validate_token(token: str) -> dict:
+def decode_token(token: str) -> dict:
     return decode(
         token,
         str(os.getenv("SECRET_KEY")),
         algorithms=["HS256"]
     )
+
+
+def validate_token(token: str) -> bool:
+    try:
+        decode(token, str(os.getenv("SECRET_KEY")), algorithms=["HS256"])
+        return True
+    except jwt.exceptions.DecodeError:
+        return False
