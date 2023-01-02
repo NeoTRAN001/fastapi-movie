@@ -2,7 +2,7 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 
 from schemas.user_schema import UserAccount
-from services.jwt_service import create_token
+from services.jwt_service import JWTService
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ def login(user: UserAccount):
 
     if user.email == "admin@gmail.com" and user.password == "admin":
         return JSONResponse(
-            content={"token": create_token(user.dict())},
+            content={"token": JWTService().create_token(user.dict())},
             status_code=status.HTTP_202_ACCEPTED
         )
 

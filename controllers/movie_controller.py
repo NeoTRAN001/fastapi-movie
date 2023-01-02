@@ -5,11 +5,11 @@ from fastapi.encoders import jsonable_encoder
 
 from typing import List
 
-from middlewares.jwt import JWTBearer
+from middlewares.jwt_bearer import JWTBearer
 from config.database import Session
+from services.movie_service import MovieService
 from models.movie_model import MovieModel
 from schemas.movie_schema import Movie
-from data.data import movies
 
 router = APIRouter()
 
@@ -23,7 +23,7 @@ router = APIRouter()
 )
 def get_movies():
     db = Session()
-    result = db.query(MovieModel).all()
+    result = MovieService(db).get_movies()
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(result))
 
 
