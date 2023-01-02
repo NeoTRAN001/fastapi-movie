@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from typing import List
 
-from middleware import JWTBearer
+from middlewares.jwt import JWTBearer
 from schemas.movie_schema import Movie
 from data.data import movies
 
@@ -16,7 +16,13 @@ def message():
     return HTMLResponse('<h1>Hola</h1>')
 
 
-@router.get('/movies', tags=['movies'], response_model=List[Movie], status_code=status.HTTP_200_OK)
+@router.get(
+    '/movies',
+    tags=['movies'],
+    response_model=List[Movie],
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(JWTBearer())]
+)
 def get_movies():
     return JSONResponse(status_code=status.HTTP_200_OK, content=movies)
 
@@ -38,8 +44,7 @@ def get_movies_by_category(category: str = Query(min_length=5, max_length=15)):
 
 @router.post(
     '/movies',
-    tags=['movies'],
-    dependencies=[Depends(JWTBearer())]
+    tags=['movies']
 )
 def create_movie(movie: Movie = Body(...)):
     movies.append(movie.dict())
