@@ -1,19 +1,17 @@
 from fastapi import APIRouter
 from fastapi import HTTPException, Body, Path, Query, status, Depends
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 from typing import List
 
 from middlewares.jwt import JWTBearer
+from config.database import Session
+from models.movie_model import MovieModel
 from schemas.movie_schema import Movie
 from data.data import movies
 
 router = APIRouter()
-
-
-@router.get('/', tags=['home'])
-def message():
-    return HTMLResponse('<h1>Hola</h1>')
 
 
 @router.get(
@@ -24,50 +22,72 @@ def message():
     dependencies=[Depends(JWTBearer())]
 )
 def get_movies():
-    return JSONResponse(status_code=status.HTTP_200_OK, content=movies)
+    db = Session()
+    result = db.query(MovieModel).all()
+    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(result))
 
 
 @router.get('/movies/{id}', tags=['movies'], status_code=status.HTTP_200_OK)
 def get_movie(id: int = Path(ge=1, le=2000)):
-    for i in movies:
-        if i["id"] == id:
-            return JSONResponse(content=i, status_code=status.HTTP_200_OK)
+    db = Session()
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
 
-    return JSONResponse(content=[], status_code=status.HTTP_404_NOT_FOUND)
+    if not result:
+        return JSONResponse(content=[], status_code=status.HTTP_404_NOT_FOUND)
+
+    return JSONResponse(content=jsonable_encoder(result), status_code=status.HTTP_200_OK)
 
 
 @router.get('/movies/', tags=['movies'])
 def get_movies_by_category(category: str = Query(min_length=5, max_length=15)):
-    data = [item for item in movies if item['category'] == category]
-    return JSONResponse(content=data)
+    db = Session()
+    result = db.query(MovieModel).filter(MovieModel.category == category).first()
+
+    if not result:
+        return JSONResponse(content=[], status_code=status.HTTP_404_NOT_FOUND)
+
+    return JSONResponse(content=jsonable_encoder(result), status_code=status.HTTP_200_OK)
 
 
-@router.post(
-    '/movies',
-    tags=['movies']
-)
+@router.post('/movies', tags=['movies'])
 def create_movie(movie: Movie = Body(...)):
-    movies.append(movie.dict())
+    db = Session()
+    new_movie = MovieModel(**movie.dict())
+
+    db.add(new_movie)
+    db.commit()
 
     return JSONResponse(content={"message": "Se ha registrado la película"})
 
 
 @router.put("/movies/{id}", tags=['movies'])
 def update_movie(id: int, movie: Movie = Body(...)):
-    for index, item in enumerate(movies):
-        if item['id'] == id:
-            movie.id = id
-            movies[index].update(movie.dict())
-            return JSONResponse(content={"message": "Se ha actualizado la película"})
+    db = Session()
+    result: MovieModel = db.query(MovieModel).filter(MovieModel.id == id).first()
 
-    raise HTTPException(status_code=404, detail="Movie not found")
+    if not result:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    result.title = movie.title
+    result.category = movie.category
+    result.overview = movie.overview
+    result.year = movie.year
+    result.rating = movie.rating
+
+    db.commit()
+
+    return JSONResponse(content={"message": "Se ha actualizado la película"})
 
 
 @router.delete('/movies/{id}', tags=['movies'])
 def delete_movie(id: int):
-    for index, item in enumerate(movies):
-        if item['id'] == id:
-            del movies[index]
-            return JSONResponse(content={"message": "Se ha eliminado la película"})
+    db = Session()
+    result: MovieModel = db.query(MovieModel).filter(MovieModel.id == id).first()
 
-    raise HTTPException(status_code=404, detail="Movie not found")
+    if not result:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    db.delete(result)
+    db.commit()
+    
+    return JSONResponse(content={"message": "Se ha eliminado la película"})
